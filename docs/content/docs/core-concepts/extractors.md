@@ -11,16 +11,16 @@ Extractors automatically parse request data and inject it into your handlers. If
 
 | Extractor | Description |
 |-----------|-------------|
-| `Path<T>` | URL path parameters |
-| `Query<T>` | Query string parameters |
-| `Json<T>` | JSON request body |
-| `Form<T>` | URL-encoded form data |
-| `Headers` | Request headers |
-| `State<T>` | Application state |
-| `Context` | Request context (trace_id) |
-| `Cookie<T>` | Typed cookie access |
+| [`Path<T>`](#path-parameters) | URL path parameters |
+| [`Query<T>`](#query-parameters) | Query string parameters |
+| [`Json<T>`](#json-body) | JSON request body |
+| [`Form<T>`](#form-data) | URL-encoded form data |
+| [`Headers`](#headers) | Request headers |
+| [`State<T>`](#application-state) | Application state |
+| [`Context`](#request-context) | Request context (trace_id) |
+| [`Cookie<T>`](#cookies) | Typed cookie access |
 | `CurrentUser` | Authenticated user (JWT) |
-| `Validated<T>` | Validated extractor |
+| [`Validated<T>`](#validation) | Validated extractor |
 | `Paginate` | Pagination params (requires feature) |
 | `Db` | Database connection (requires feature) |
 
