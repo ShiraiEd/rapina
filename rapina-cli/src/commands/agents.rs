@@ -313,18 +313,41 @@ pub fn generate_claude_md() -> &'static str {
 /// Also creates `CLAUDE.md` (if absent) and refreshes `.rapina-docs/` to match the new block.
 pub fn fix_agents(base: &Path, force: bool) -> Result<(), String> {
     let agents_path = base.join("AGENTS.md");
-    let source = std::fs::read_to_string(&agents_path).unwrap_or_default();
+    let source = match std::fs::read_to_string(&agents_path) {
+        Ok(s) => s,
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                String::new()
+            } else {
+                return Err(format!("failed to read {}: {e}", agents_path.display()));
+            }
+        }
+    };
 
-    // Fall back to empty flags when Cargo.toml is absent or has no rapina dependency
-    // (e.g. running `rapina doctor --fix-agents` outside a project). The generated
-    // AGENTS.md will include only the always-on fragments; conditional ones are omitted.
-    let flags = super::verify_rapina_project()
-        .map(|cargo| detect_flags(&cargo))
-        .unwrap_or(AgentsFlags {
-            with_db: false,
-            with_websocket: false,
-            with_jobs: false,
-        });
+    let cargo_path = base.join("Cargo.toml");
+    let flags = match std::fs::read_to_string(&cargo_path) {
+        // Cargo.toml found — detect which optional fragments to include.
+        // If the file can't be parsed, fall back to always-on fragments only.
+        Ok(content) => toml::from_str::<toml::Value>(&content)
+            .map(|parsed| detect_flags(&parsed))
+            .unwrap_or(AgentsFlags {
+                with_db: false,
+                with_websocket: false,
+                with_jobs: false,
+            }),
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                // No Cargo.toml — refuse rather than silently generating a flags-less file.
+                return Err(format!(
+                    "no Cargo.toml found in {}. Run this command from a Rust project directory.",
+                    base.display()
+                ));
+            } else {
+                // Any other IO error (permissions, etc.) should fail loudly.
+                return Err(format!("failed to read {}: {e}", cargo_path.display()));
+            }
+        }
+    };
 
     // Check for user edits inside markers before touching anything
     let existing_block = if source.is_empty() {
@@ -430,6 +453,17 @@ pub fn simple_diff(old: &str, new: &str) -> String {
 mod tests {
     use super::*;
 
+    // Writes a minimal Cargo.toml with a rapina dependency so fix_agents doesn't
+    // error on the missing-Cargo.toml guard. Tests that care about feature flags
+    // should write their own Cargo.toml instead of using this helper.
+    fn write_minimal_cargo_toml(dir: &std::path::Path) {
+        std::fs::write(
+            dir.join("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n\n[dependencies]\nrapina = \"0.1.0\"\n",
+        )
+        .unwrap();
+    }
+
     #[test]
     fn test_parse_agents_block_roundtrip() {
         let flags = AgentsFlags {
@@ -517,6 +551,7 @@ rapina = "0.11""#,
     #[test]
     fn test_fix_agents_refuses_user_edits_without_force() {
         let dir = tempfile::tempdir().unwrap();
+        write_minimal_cargo_toml(dir.path());
         let flags = AgentsFlags {
             with_db: false,
             with_websocket: false,
@@ -537,6 +572,7 @@ rapina = "0.11""#,
     #[test]
     fn test_fix_agents_force_overwrites_user_edits() {
         let dir = tempfile::tempdir().unwrap();
+        write_minimal_cargo_toml(dir.path());
         let flags = AgentsFlags {
             with_db: false,
             with_websocket: false,
@@ -556,17 +592,17 @@ rapina = "0.11""#,
 
     #[test]
     fn test_fix_agents_creates_fresh_when_missing() {
-        // No Cargo.toml in the temp dir → verify_rapina_project fails → empty AgentsFlags
-        // (always-on fragments only). This tests the fresh-creation path, not flag selection.
+        // Tests the fresh-creation path (no existing AGENTS.md), not flag selection.
         let dir = tempfile::tempdir().unwrap();
+        write_minimal_cargo_toml(dir.path());
         fix_agents(dir.path(), false).unwrap();
         assert!(dir.path().join("AGENTS.md").exists());
     }
 
     #[test]
     fn test_fix_agents_creates_claude_md_when_absent() {
-        // No Cargo.toml → empty AgentsFlags (always-on fragments only).
         let dir = tempfile::tempdir().unwrap();
+        write_minimal_cargo_toml(dir.path());
         fix_agents(dir.path(), false).unwrap();
         assert!(dir.path().join("CLAUDE.md").exists());
         let content = std::fs::read_to_string(dir.path().join("CLAUDE.md")).unwrap();
@@ -576,6 +612,7 @@ rapina = "0.11""#,
     #[test]
     fn test_fix_agents_does_not_overwrite_existing_claude_md() {
         let dir = tempfile::tempdir().unwrap();
+        write_minimal_cargo_toml(dir.path());
         let custom = "# My custom claude rules\n";
         std::fs::write(dir.path().join("CLAUDE.md"), custom).unwrap();
 
@@ -588,6 +625,7 @@ rapina = "0.11""#,
     #[test]
     fn test_fix_agents_populates_rapina_docs() {
         let dir = tempfile::tempdir().unwrap();
+        write_minimal_cargo_toml(dir.path());
         fix_agents(dir.path(), false).unwrap();
         assert!(dir.path().join(".rapina-docs/core.md").exists());
         assert!(dir.path().join(".rapina-docs/extractors.md").exists());
@@ -596,8 +634,9 @@ rapina = "0.11""#,
     }
 
     #[test]
-    fn test_fix_agents_stale_preserves_surrounding_content() {
+    fn test_fix_agents_preserves_surrounding_content() {
         let dir = tempfile::tempdir().unwrap();
+        write_minimal_cargo_toml(dir.path());
         let flags = AgentsFlags {
             with_db: false,
             with_websocket: false,
@@ -618,6 +657,43 @@ rapina = "0.11""#,
             result.contains("## Custom footer\n"),
             "footer lost: {result}"
         );
+    }
+
+    #[test]
+    fn test_fix_agents_updates_stale_block() {
+        let dir = tempfile::tempdir().unwrap();
+
+        // Step 1: Cargo.toml declares postgres — detect_flags will return with_db: true.
+        std::fs::write(
+            dir.path().join("Cargo.toml"),
+            "[package]\nname = \"test\"\nversion = \"0.1.0\"\n\n[dependencies]\nrapina = { version = \"0.1.0\", features = [\"postgres\"] }\n",
+        ).unwrap();
+
+        // Step 2: Write a stale AGENTS.md — block was generated without the db fragment.
+        let stale_flags = AgentsFlags {
+            with_db: false,
+            with_websocket: false,
+            with_jobs: false,
+        };
+        std::fs::write(
+            dir.path().join("AGENTS.md"),
+            generate_agents_md(&stale_flags),
+        )
+        .unwrap();
+
+        // Step 3: fix_agents detects with_db: true from Cargo.toml and regenerates the block.
+        fix_agents(dir.path(), false).unwrap();
+
+        let result = std::fs::read_to_string(dir.path().join("AGENTS.md")).unwrap();
+        let block = parse_agents_block(&result).expect("block must be present");
+
+        // Step 4: The updated block must include the migrations fragment and have a valid hash.
+        assert!(
+            block.body.contains("migration"),
+            "migrations fragment missing: {}",
+            block.body
+        );
+        assert_eq!(sha256_hex(&block.body), block.stored_hash);
     }
 
     #[test]
