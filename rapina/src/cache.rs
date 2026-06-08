@@ -174,13 +174,24 @@ impl CacheBackend for InMemoryCache {
     }
 }
 
+/// Configuration for Redis Tls
+#[cfg(feature = "cache-redis")]
+pub struct RedisTlsConfig {
+    pub ca_cert: Option<Vec<u8>>,
+    pub client_cert: Option<Vec<u8>>,
+    pub client_key: Option<Vec<u8>>,
+}
+
 /// Configuration for the cache layer.
 pub enum CacheConfig {
     /// In-memory cache with a maximum number of entries.
     InMemory { max_entries: usize },
     /// Redis-backed cache (requires `cache-redis` feature).
     #[cfg(feature = "cache-redis")]
-    Redis { url: String },
+    Redis {
+        url: String,
+        tls: Option<RedisTlsConfig>,
+    },
 }
 
 impl CacheConfig {
@@ -191,9 +202,10 @@ impl CacheConfig {
 
     /// Creates a Redis cache configuration.
     #[cfg(feature = "cache-redis")]
-    pub fn redis(url: &str) -> Self {
+    pub fn redis(url: &str, tls: Option<RedisTlsConfig>) -> Self {
         CacheConfig::Redis {
             url: url.to_string(),
+            tls,
         }
     }
 
@@ -202,8 +214,8 @@ impl CacheConfig {
         match self {
             CacheConfig::InMemory { max_entries } => Ok(Arc::new(InMemoryCache::new(max_entries))),
             #[cfg(feature = "cache-redis")]
-            CacheConfig::Redis { url } => {
-                let backend = crate::cache_redis::RedisCache::connect(&url)
+            CacheConfig::Redis { url, tls } => {
+                let backend = crate::cache_redis::RedisCache::connect(&url, tls)
                     .await
                     .map_err(|e| {
                         std::io::Error::other(format!("Redis connection failed: {}", e))
