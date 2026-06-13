@@ -174,7 +174,10 @@ impl CacheBackend for InMemoryCache {
     }
 }
 
-/// Configuration for Redis Tls
+/// Configuration for Redis TLS
+///
+/// Pass to [`CacheConfig::redis_with_tls`] when connecting to `rediss://`
+/// that requires a custom CA certificate
 #[cfg(feature = "cache-redis")]
 pub struct RedisTlsConfig {
     pub ca_cert: Option<Vec<u8>>,
@@ -202,10 +205,19 @@ impl CacheConfig {
 
     /// Creates a Redis cache configuration.
     #[cfg(feature = "cache-redis")]
-    pub fn redis(url: &str, tls: Option<RedisTlsConfig>) -> Self {
+    pub fn redis(url: &str) -> Self {
         CacheConfig::Redis {
             url: url.to_string(),
-            tls,
+            tls: None,
+        }
+    }
+
+    /// Creates a Redis cache configuration with TLS
+    #[cfg(feature = "cache-redis")]
+    pub fn redis_with_tls(url: &str, tls: RedisTlsConfig) -> Self {
+        CacheConfig::Redis {
+            url: url.to_string(),
+            tls: Some(tls),
         }
     }
 

@@ -159,12 +159,12 @@ Rapina::new()
 If you also want to use a certificate alongside the redis, pass it after the url like this:
 
 ```rust
-CacheConfig::redis("rediss://localhost", Some(RedisTlsConfig {
-      ca_cert: Some(std::fs::read("ca.pem")?),
-      client_cert: Some(std::fs::read("client.pem")?),
-      client_key: Some(std::fs::read("client.key")?),
-  }))
-  ```
+CacheConfig::redis_with_tls("rediss://localhost", RedisTlsConfig {
+    ca_cert: Some(std::fs::read("ca.pem")?),
+    client_cert: Some(std::fs::read("client.pem")?),
+    client_key: Some(std::fs::read("client.key")?),
+})
+```
 ___
 ## Response Headers
 

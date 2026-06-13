@@ -45,6 +45,7 @@ impl From<StoredResponse> for CachedResponse {
 }
 
 /// Redis cache backend using multiplexed async connections.
+#[derive(Debug)]
 pub struct RedisCache {
     conn: redis::aio::MultiplexedConnection,
     prefix: String,
@@ -56,32 +57,30 @@ impl RedisCache {
         url: &str,
         tls: Option<RedisTlsConfig>,
     ) -> Result<Self, redis::RedisError> {
-        let client = if url.contains("rediss://") {
-            let tls = tls.unwrap_or(RedisTlsConfig {
-                ca_cert: None,
-                client_cert: None,
-                client_key: None,
-            });
-            let client_tls = match (tls.client_cert, tls.client_key) {
-                (Some(cert), Some(key)) => Some(ClientTlsConfig {
-                    client_cert: cert,
-                    client_key: key,
-                }),
-                (None, None) => None,
-                _ => {
-                    return Err(redis::RedisError::from((
-                        redis::ErrorKind::InvalidClientConfig,
-                        "client_cert and client_key must be provided",
-                    )));
-                }
-            };
-            let tls_certs = TlsCertificates {
-                client_tls,
-                root_cert: tls.ca_cert,
-            };
-            redis::Client::build_with_tls(url, tls_certs)?
-        } else {
-            redis::Client::open(url)?
+        let client = match tls {
+            Some(tls) => {
+                let client_tls = match (tls.client_cert, tls.client_key) {
+                    (Some(client_cert), Some(client_key)) => Some(ClientTlsConfig {
+                        client_cert,
+                        client_key,
+                    }),
+                    (None, None) => None,
+                    _ => {
+                        return Err(redis::RedisError::from((
+                            redis::ErrorKind::InvalidClientConfig,
+                            "client_cert and client_key must be provided together",
+                        )));
+                    }
+                };
+                redis::Client::build_with_tls(
+                    url,
+                    TlsCertificates {
+                        client_tls,
+                        root_cert: tls.ca_cert,
+                    },
+                )?
+            }
+            None => redis::Client::open(url)?,
         };
 
         let conn = client.get_multiplexed_async_connection().await?;
@@ -230,6 +229,9 @@ mod tests {
         )
         .await;
 
-        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().kind(),
+            redis::ErrorKind::InvalidClientConfig
+        );
     }
 }
