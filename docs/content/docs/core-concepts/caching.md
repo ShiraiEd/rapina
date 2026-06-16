@@ -118,7 +118,7 @@ rapina = { version = "0.12.0", features = ["cache-redis"] }
 use rapina::cache::CacheConfig;
 
 Rapina::new()
-    .with_cache(CacheConfig::redis("redis://localhost:6379", None)).await?
+    .with_cache(CacheConfig::redis("redis://localhost:6379")).await?
     .discover()
     .listen("127.0.0.1:3000")
     .await
@@ -154,7 +154,7 @@ Rapina::new()
 ```
 
 
-### TLS Certificates
+#### TLS Certificates
 
 If you also want to use a certificate alongside the redis, pass it after the url like this:
 
@@ -165,7 +165,7 @@ CacheConfig::redis_with_tls("rediss://localhost", RedisTlsConfig {
     client_key: Some(std::fs::read("client.key")?),
 })
 ```
-___
+---
 ## Response Headers
 
 Every cached GET response includes an `x-cache` header:
