@@ -15,6 +15,7 @@ Routine dependency-only updates are intentionally omitted unless they change use
 - **OpenTelemetry OTLP tracing exporter**: `with_telemetry(TelemetryConfig { endpoint, service_name, sample_rate })` exports traces over OTLP gRPC to a collector such as Jaeger or Datadog, behind the `otel` feature. Incoming W3C `traceparent` headers are honored so traces continue across service boundaries, request spans follow the HTTP semantic conventions and carry the response status, the OTel `trace_id`/`span_id` are recorded on the request span so logs correlate with the exported trace, and pending spans are flushed on graceful shutdown. Plaintext gRPC by default; enable `otel-tls` for `https://` collectors (#607).
 - **Redis TLS certificates**: `CacheConfig::redis_with_tls` and `RedisTlsConfig` support CA certificates plus client certificates and keys for `rediss://` Redis cache connections (#617).
 - **`rapina doctor` `llms.txt` check**: `rapina doctor` now checks whether `/__rapina/llms.txt` is reachable and warns when it is disabled or unreachable (#618).
+- **GraphQL feature flag**: `GraphQLRequest` extractor and `GraphQLResponse` responder for [`async-graphql`](https://docs.rs/async-graphql) integration. Always returns HTTP 200; field-level errors live in the response body per the [GraphQL-over-HTTP spec](https://graphql.github.io/graphql-over-http/) (#597).
 
 ### Changed
 - **Native CLI HTTP client**: `rapina doctor`, `rapina routes`, `rapina openapi`, and `rapina llms` use an internal `ureq` client instead of shelling out to `curl` (#586).
