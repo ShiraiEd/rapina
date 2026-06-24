@@ -63,6 +63,7 @@ use serde::Deserialize;
 use std::ops::Deref;
 
 /// Intermediate struct for GET query-param extraction.
+/// Extensions intentionally unsupported for now, implement later for APQ/persistedQuery
 #[derive(Deserialize)]
 struct GraphQLParams {
     query: String,
@@ -174,7 +175,7 @@ impl FromRequest for GraphQLRequest {
                 Ok(GraphQLRequest(inner))
             }
 
-            _ => Err(crate::error::Error::bad_request(
+            _ => Err(crate::error::Error::method_not_allowed(
                 "Method not allowed in GraphQL",
             )),
         }
@@ -227,6 +228,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn get_with_variables_and_operation_name() {
+        let req = TestRequest::get(
+            "/graphql?query=%7B+hello+%7D&variables=%7B%22name%22%3A%22world%22%7D&operationName=Hello",
+        )
+        .into_incoming_request()
+        .await;
+
+        let result = GraphQLRequest::from_request(req, &empty_params(), &empty_state()).await;
+        assert!(result.is_ok());
+        let request = result.unwrap().0;
+        assert_eq!(
+            request.variables,
+            Variables::from_json(serde_json::json!({ "name" : "world" }))
+        );
+        assert_eq!(request.operation_name.as_deref(), Some("Hello"));
+    }
+
+    #[tokio::test]
     async fn malformed_body_returns_400() {
         let req = TestRequest::post("/graphql")
             .header("content-type", "application/json")
@@ -257,5 +276,16 @@ mod tests {
 
         let json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
         assert!(json.get("errors").is_some());
+    }
+
+    #[tokio::test]
+    async fn unsupported_method_returns_405() {
+        let req = TestRequest::delete("/graphql")
+            .into_incoming_request()
+            .await;
+
+        let result = GraphQLRequest::from_request(req, &empty_params(), &empty_state()).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().status(), 405);
     }
 }
