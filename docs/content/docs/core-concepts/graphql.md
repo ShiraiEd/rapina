@@ -45,7 +45,7 @@ Field-level resolver errors live in the response body's `errors` array, never
 in the HTTP status.
 
 The 400 status is reserved for *transport-level* failures: malformed JSON in
-the POST body, invalid query string in GET, or unsupported HTTP method.
+the POST body or an invalid query string in GET. Unsupported HTTP methods return 405.
 
  ### Limitations
 
