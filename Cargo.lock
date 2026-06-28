@@ -3131,7 +3131,7 @@ dependencies = [
 
 [[package]]
 name = "rapina"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "async-graphql",
  "async-stream",
@@ -3192,7 +3192,7 @@ dependencies = [
 
 [[package]]
 name = "rapina-cli"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "chrono",
  "clap",
@@ -3220,7 +3220,7 @@ dependencies = [
 
 [[package]]
 name = "rapina-macros"
-version = "0.12.0"
+version = "0.13.0"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
