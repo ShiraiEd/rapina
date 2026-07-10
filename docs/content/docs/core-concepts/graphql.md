@@ -63,7 +63,7 @@ async-graphql's `Context` is a type-map, so resolvers retrieve it with
 `ctx.data::<RapinaGraphQLContext>()`:
 
 ```rust
-use rapina::prelude;
+use rapina::prelude::*;
 
 async fn me(&self, ctx: &Context<'_>) -> async_graphql::Result<User> {
     let rapina_ctx = ctx.data::<RapinaGraphQLContext>()?;

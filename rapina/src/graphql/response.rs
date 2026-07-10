@@ -1,5 +1,5 @@
 //! GraphQLResponder
-//! Utilizes graphql-async's `Response` as `GraphQLResponseInner` alias
+//! Uses async-graphql's `Response` as `GraphQLResponseInner` alias
 //! Wrapped around the `GraphQLResponse` structure to work around the orphan rule
 
 use crate::response::{APPLICATION_JSON, BoxBody, IntoResponse, full};

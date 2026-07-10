@@ -1,5 +1,5 @@
 //! GraphQL Request extractor
-//! Utilizes async-graphql's `Request` as `GraphQLRequestInner` alias
+//! Uses async-graphql's `Request` as `GraphQLRequestInner` alias
 //! wrapped around the `GraphQLRequest` struct to work around the `orphan rule`
 //! Also declares the `GraphQLParams` for the query params extraction
 
