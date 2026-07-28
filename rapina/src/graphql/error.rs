@@ -11,7 +11,7 @@ impl ErrorExtensions for RapinaError {
             e.set("code", self.code());
             if let Some(tid) = self.trace_id() {
                 e.set("trace_id", tid);
-            };
+            }
             if let Some(d) = self.details() {
                 if let Ok(json) = async_graphql::Value::from_json(d.clone()) {
                     e.set("details", json);
@@ -101,7 +101,7 @@ mod tests {
         let gql = graphql_error("INVALID_INPUT", "qty too large", "trace-xyz");
 
         assert_eq!(gql.message, "qty too large");
-        let ext = gql.extensions.expect("Should have extensions");
+        let ext = gql.extensions.expect("Should have extentions");
         assert_eq!(ext.get("code"), Some(&Value::from("INVALID_INPUT")));
         assert_eq!(ext.get("trace_id"), Some(&Value::from("trace-xyz")));
     }

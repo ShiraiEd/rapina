@@ -29,8 +29,8 @@ struct GraphQLParams {
 /// - **GET** with the same fields as URL query string params; the
 ///   `variables` param is URL-encoded JSON.
 ///
-/// Any other HTTP method or malformed input returns a 400 via
-/// [`Error::bad_request`](crate::error::Error::bad_request).
+/// Any other HTTP method or malformed input returns a 405 via
+/// [`Error::method_not_allowed`](crate::error::Error::method_not_allowed).
 #[derive(Debug)]
 pub struct GraphQLRequest(pub GraphQLRequestInner);
 

@@ -50,7 +50,7 @@ the POST body or an invalid query string in GET. Unsupported HTTP methods return
 ## Request context
 
 `RapinaGraphQLContext` carries Rapina's request-scoped data into resolvers
-the authenticated user and the trace id:
+(the authenticated user and the trace id):
 
 ```rust
 pub struct RapinaGraphQLContext {
@@ -74,12 +74,12 @@ async fn me(&self, ctx: &Context<'_>) -> async_graphql::Result<User> {
 }
 ```
 
-Automatic per-request injection  pulling `CurrentUser` and `trace_id` from the
-request and calling `request.data(ctx)` for you  arrives with the `with_graphql`
-builder method. Until then, inject it yourself before executing:
+Automatic per-request injection by pulling `CurrentUser` and `trace_id` from the
+request and calling `request.data(ctx)`, it will arrive with the `with_graphql` builder method (Next PR).
+So until then, inject it yourself before executing:
 
 ```rust
-GraphQLResponse(schema.execute(req.0.data(rapina_ctx)).await)
+GraphQLResponse(schema.execute(req.into_inner().data(rapina_ctx)).await)
 ```
 
 ## Errors
