@@ -1,4 +1,4 @@
-//! Background Jobs Macro
+//! The `#[job]` attribute macro.
 
 use quote::quote;
 use syn::spanned::Spanned;
